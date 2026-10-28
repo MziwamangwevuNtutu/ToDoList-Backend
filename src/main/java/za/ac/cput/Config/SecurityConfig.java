@@ -38,11 +38,21 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()  // ✅ Public endpoints
+                        // PUBLIC ENDPOINTS - No authentication required
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/todolist/api/auth/**",
+                                "/",
+                                "/health",
+                                "/actuator/**"
+                        ).permitAll()
+                        // ALL OTHER ENDPOINTS require authentication
                         .anyRequest().authenticated()
                 );
 
+        // Add JWT filter
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
@@ -56,27 +66,15 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Remove this @Bean - let Spring manage the filter
-    // @Bean
-    // public JwtAuthenticationFilter jwtAuthenticationFilter() {
-    //     return new JwtAuthenticationFilter();
-    // }
-
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // Allow localhost for development
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                frontendUrl
-        ));
-
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
